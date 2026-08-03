@@ -1,0 +1,30 @@
+## Weekend Recon: Node Base Image
+
+### Security Analysis of `node:18-alpine`
+
+A proactive scan of the `node:18-alpine` base image using Aqua Security Trivy identified critical vulnerabilities in system-level dependencies. Below are the top 2 key vulnerabilities identified prior to deploying the Medusa headless e-commerce application:
+
+#### 1. CVE-2023-52425 (libexpat - XML Parser Parsing Vulnerability)
+* **Severity:** High / Critical
+* **Package:** `libexpat` / `expat`
+* **Exploit Mechanism:** An attacker sends a specially crafted, oversized, or recursively nested XML payload to the application endpoint. The parsing engine in `libexpat` fails to bound resource expansion or handle token buffer boundaries properly, causing high CPU/memory consumption (Denial of Service) or potential buffer overflow conditions.
+* **Impact on Medusa E-Commerce:** E-commerce backends often ingest XML for payment gateways, inventory feeds, or legacy integration endpoints. Exploiting this could take down the server during production traffic.
+
+#### 2. CVE-2024-2511 (OpenSSL - Unbounded Memory Allocation / DoS)
+* **Severity:** High
+* **Package:** `libcrypto3` / `openssl`
+* **Exploit Mechanism:** An attacker triggers repetitive TLS session caching or renegotiation requests with specific parameters. OpenSSL fails to correctly limit memory allocations for session tickets, resulting in memory exhaustion.
+* **Impact on Medusa E-Commerce:** Since Medusa serves secure HTTPS API traffic, an attacker could issue malicious TLS handshakes to exhaust system RAM, causing the Node.js container process to crash (Out-Of-Memory kill).
+
+---
+
+### AI Prompt Journal
+
+* **Prompt Used:**
+  > "I am preparing to deploy an e-commerce backend on the node:18-alpine Docker image. Analyze these Trivy scan results. Identify the top 2 vulnerabilities (CVEs) I need to be aware of, and explain in simple terms how an attacker might exploit them."
+
+* **AI Response:**
+  The AI prioritized vulnerabilities impacting core runtime dependencies (`libexpat` and `OpenSSL`). It highlighted CVE-2023-52425 and CVE-2024-2511 as high-risk vector points for an e-commerce API. It explained that `libexpat` could lead to Denial of Service via XML payload parsing, while OpenSSL session ticket flaws could lead to memory exhaustion during TLS negotiation.
+
+* **My Verification:**
+  Successfully executed `docker pull node:18-alpine` and performed the container scan using `docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image node:18-alpine`. Baseline vulnerabilities were identified and documented prior to committing the base image into production. Captured visual proof in `weekend_recon.png`.
